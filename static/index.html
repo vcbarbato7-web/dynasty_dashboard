@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Ebomb Dynasty Dashboard</title>
+</head>
+<body>
+  <h1>Ebomb Dynasty</h1>
+  <p>Loading league data...</p>
+  <pre id="output"></pre>
+  <script>
+    fetch('/api/league')
+      .then(r => r.json())
+      .then(data => {
+        document.getElementById('output').textContent = JSON.stringify(data, null, 2);
+      });
+  </script>
+</body>
+</html>
