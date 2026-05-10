@@ -1,18 +1,404 @@
-<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Ebomb Dynasty Dashboard</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ebomb Dynasty Dashboard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
+  
+  header { background: #1a1d2e; border-bottom: 1px solid #2d3748; padding: 16px 24px; display: flex; align-items: center; gap: 16px; }
+  header h1 { font-size: 20px; font-weight: 600; color: #fff; }
+  header span { font-size: 13px; color: #718096; }
+  
+  nav { display: flex; gap: 4px; padding: 16px 24px 0; border-bottom: 1px solid #2d3748; background: #1a1d2e; }
+  .nav-btn { padding: 8px 16px; border: none; background: none; color: #718096; font-size: 14px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s; }
+  .nav-btn.active { color: #63b3ed; border-bottom-color: #63b3ed; }
+  .nav-btn:hover { color: #e2e8f0; }
+  
+  main { padding: 24px; max-width: 1200px; margin: 0 auto; }
+  
+  .section { display: none; }
+  .section.active { display: block; }
+  
+  /* Cards */
+  .card { background: #1a1d2e; border: 1px solid #2d3748; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+  .card-title { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: #718096; margin-bottom: 16px; }
+  
+  /* Power Rankings Table */
+  .rankings-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .rankings-table th { text-align: left; padding: 8px 12px; color: #718096; font-size: 12px; font-weight: 500; border-bottom: 1px solid #2d3748; }
+  .rankings-table th.num { text-align: right; }
+  .rankings-table td { padding: 12px; border-bottom: 1px solid #1e2433; vertical-align: middle; }
+  .rankings-table td.num { text-align: right; font-family: monospace; }
+  .rankings-table tr:last-child td { border-bottom: none; }
+  .rankings-table tr:hover td { background: #1e2433; }
+  
+  .rank-num { font-size: 13px; color: #718096; width: 32px; }
+  .team-name { font-weight: 500; color: #fff; }
+  .team-meta { font-size: 12px; color: #718096; }
+  
+  .build-badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 500; white-space: nowrap; }
+  
+  .pos-val { font-size: 13px; font-family: monospace; }
+  .pos-qb { color: #63b3ed; }
+  .pos-rb { color: #68d391; }
+  .pos-wr { color: #f6ad55; }
+  .pos-te { color: #fc8181; }
+  
+  /* Value bar */
+  .bar-wrap { background: #2d3748; border-radius: 4px; height: 6px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; background: #63b3ed; }
+  
+  /* Pie / percentage */
+  .pct-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+  .pct-card { background: #1e2433; border-radius: 10px; padding: 14px; }
+  .pct-team { font-size: 13px; font-weight: 500; margin-bottom: 8px; }
+  .pct-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 12px; }
+  .pct-label { color: #718096; }
+  .pct-val { font-family: monospace; }
+  
+  /* Roster */
+  .team-select-wrap { margin-bottom: 20px; }
+  select { background: #1a1d2e; border: 1px solid #2d3748; color: #e2e8f0; padding: 8px 12px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+  
+  .roster-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+  .pos-section { background: #1a1d2e; border: 1px solid #2d3748; border-radius: 12px; overflow: hidden; }
+  .pos-header { padding: 10px 16px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
+  .pos-header.qb { background: #1a2744; color: #63b3ed; }
+  .pos-header.rb { background: #1a2e22; color: #68d391; }
+  .pos-header.wr { background: #2e2414; color: #f6ad55; }
+  .pos-header.te { background: #2e1a1a; color: #fc8181; }
+  .pos-header.picks { background: #2a2a1a; color: #faf089; }
+  
+  .player-row { display: flex; align-items: center; gap: 10px; padding: 9px 16px; border-bottom: 1px solid #1e2433; }
+  .player-row:last-child { border-bottom: none; }
+  .player-rank { font-size: 11px; font-family: monospace; color: #718096; min-width: 30px; text-align: right; }
+  .player-name { flex: 1; font-size: 13px; }
+  .rookie-badge { font-size: 10px; background: #1a2e22; color: #68d391; padding: 1px 6px; border-radius: 999px; }
+  
+  /* Change indicators */
+  .change-pos { color: #68d391; }
+  .change-neg { color: #fc8181; }
+  .change-neu { color: #718096; }
+
+  .loading { text-align: center; padding: 60px; color: #718096; font-size: 15px; }
+  .last-updated { font-size: 12px; color: #718096; margin-bottom: 20px; }
+
+  /* Summary stat boxes */
+  .stat-boxes { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .stat-box { background: #1a1d2e; border: 1px solid #2d3748; border-radius: 10px; padding: 16px; }
+  .stat-box-label { font-size: 11px; color: #718096; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+  .stat-box-value { font-size: 22px; font-weight: 600; color: #fff; }
+  .stat-box-sub { font-size: 12px; color: #718096; margin-top: 2px; }
+</style>
 </head>
 <body>
-  <h1>Ebomb Dynasty</h1>
-  <p>Loading league data...</p>
-  <pre id="output"></pre>
-  <script>
-    fetch('/api/league')
-      .then(r => r.json())
-      .then(data => {
-        document.getElementById('output').textContent = JSON.stringify(data, null, 2);
-      });
-  </script>
+
+<header>
+  <div>
+    <h1>🏈 Ebomb Dynasty</h1>
+    <span>10-team · PPR · Sleeper · 2026</span>
+  </div>
+</header>
+
+<nav>
+  <button class="nav-btn active" onclick="showSection('rankings')">Power Rankings</button>
+  <button class="nav-btn" onclick="showSection('rosters')">Rosters</button>
+  <button class="nav-btn" onclick="showSection('changes')">Value Changes</button>
+</nav>
+
+<main>
+  <div id="loading" class="loading">Loading league data...</div>
+
+  <div id="sections" style="display:none">
+
+    <!-- POWER RANKINGS -->
+    <div id="sec-rankings" class="section active">
+      <p class="last-updated" id="last-updated"></p>
+
+      <div class="stat-boxes" id="stat-boxes"></div>
+
+      <div class="card">
+        <div class="card-title">Overall Power Rankings</div>
+        <table class="rankings-table">
+          <thead>
+            <tr>
+              <th style="width:36px">#</th>
+              <th>Team</th>
+              <th class="num">Total</th>
+              <th class="num">QB</th>
+              <th class="num">RB</th>
+              <th class="num">WR</th>
+              <th class="num">TE</th>
+              <th class="num">Picks</th>
+              <th>Build</th>
+              <th>Value Bar</th>
+            </tr>
+          </thead>
+          <tbody id="rankings-body"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-title">% of Total League Value by Position</div>
+        <div class="pct-grid" id="pct-grid"></div>
+      </div>
+    </div>
+
+    <!-- ROSTERS -->
+    <div id="sec-rosters" class="section">
+      <div class="team-select-wrap">
+        <select id="team-select" onchange="renderRoster()"></select>
+      </div>
+      <div class="roster-grid" id="roster-grid"></div>
+    </div>
+
+    <!-- VALUE CHANGES -->
+    <div id="sec-changes" class="section">
+      <div class="card">
+        <div class="card-title">Value Changes Over Time</div>
+        <p style="font-size:13px;color:#718096;margin-bottom:16px;">Snapshots are saved every hour. Changes will appear here as data accumulates over days and weeks.</p>
+        <table class="rankings-table" id="changes-table">
+          <thead>
+            <tr>
+              <th>Team</th>
+              <th class="num">Current</th>
+              <th class="num">1 Week</th>
+              <th class="num">1 Month</th>
+              <th class="num">3 Months</th>
+            </tr>
+          </thead>
+          <tbody id="changes-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+let leagueData = null;
+let historyData = [];
+
+const BUILD_COLORS = {
+  JUGGERNAUT: { bg: '#1a2e22', color: '#68d391' },
+  STRONG_CONTENDER: { bg: '#1a2744', color: '#63b3ed' },
+  WEAK_CONTENDER: { bg: '#1e2433', color: '#a0aec0' },
+  BALANCED: { bg: '#2e2414', color: '#f6ad55' },
+  STRONG_REBUILDER: { bg: '#2e1a1a', color: '#fc8181' },
+  WEAK_REBUILDER: { bg: '#2a1a2a', color: '#b794f4' }
+};
+
+function showSection(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('sec-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function teamName(user) {
+  const name = user.team_name && user.team_name.trim() ? user.team_name : user.display_name;
+  return name || user.user_name;
+}
+
+async function loadData() {
+  try {
+    const [leagueRes, historyRes] = await Promise.all([
+      fetch('/api/league'),
+      fetch('/api/history')
+    ]);
+    const leagueJson = await leagueRes.json();
+    leagueData = leagueJson.data;
+    historyData = await historyRes.json();
+
+    const ts = new Date(leagueJson.timestamp * 1000);
+    document.getElementById('last-updated').textContent = `Last updated: ${ts.toLocaleString()}`;
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('sections').style.display = 'block';
+
+    renderRankings();
+    renderStatBoxes();
+    renderPctGrid();
+    renderTeamSelect();
+    renderRoster();
+    renderChanges();
+  } catch(e) {
+    document.getElementById('loading').textContent = 'Error loading data: ' + e.message;
+  }
+}
+
+function renderStatBoxes() {
+  const values = leagueData.values;
+  const totals = Object.values(values).map(v => v.Overall);
+  const max = Math.max(...totals);
+  const min = Math.min(...totals);
+  const avg = Math.round(totals.reduce((a,b) => a+b, 0) / totals.length);
+  const topTeam = Object.entries(values).sort((a,b) => b[1].Overall - a[1].Overall)[0];
+  const topUser = leagueData.settings.users.find(u => u.user_id === topTeam[0]);
+
+  document.getElementById('stat-boxes').innerHTML = `
+    <div class="stat-box"><div class="stat-box-label">Top Team</div><div class="stat-box-value" style="font-size:16px">${topUser ? teamName(topUser) : ''}</div><div class="stat-box-sub">${max.toLocaleString()} pts</div></div>
+    <div class="stat-box"><div class="stat-box-label">League Average</div><div class="stat-box-value">${avg.toLocaleString()}</div><div class="stat-box-sub">overall value</div></div>
+    <div class="stat-box"><div class="stat-box-label">Value Gap</div><div class="stat-box-value">${(max - min).toLocaleString()}</div><div class="stat-box-sub">top vs bottom</div></div>
+    <div class="stat-box"><div class="stat-box-label">Teams</div><div class="stat-box-value">${leagueData.settings.league_size}</div><div class="stat-box-sub">${leagueData.settings.scoring} · Dynasty</div></div>
+  `;
+}
+
+function renderRankings() {
+  const values = leagueData.values;
+  const users = leagueData.settings.users;
+  const sorted = Object.entries(values).sort((a,b) => b[1].Overall - a[1].Overall);
+  const maxVal = sorted[0][1].Overall;
+
+  document.getElementById('rankings-body').innerHTML = sorted.map(([uid, v], i) => {
+    const user = users.find(u => u.user_id === uid) || {};
+    const bc = BUILD_COLORS[v.buildType?.type] || { bg: '#1e2433', color: '#a0aec0' };
+    const label = (v.buildType?.type || '').replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+    const qb = typeof v.QB === 'object' ? v.QB.value : v.QB;
+    const rb = typeof v.RB === 'object' ? v.RB.value : v.RB;
+    const wr = typeof v.WR === 'object' ? v.WR.value : v.WR;
+    const te = typeof v.TE === 'object' ? v.TE.value : v.TE;
+    const picks = typeof v.PICKS === 'object' ? v.PICKS.value : v.PICKS;
+    const pct = Math.round(v.Overall / maxVal * 100);
+
+    return `<tr>
+      <td class="rank-num">${i+1}</td>
+      <td><div class="team-name">${teamName(user)}</div><div class="team-meta">${user.user_name || ''}</div></td>
+      <td class="num" style="font-weight:600;color:#fff;">${v.Overall.toLocaleString()}</td>
+      <td class="num pos-val pos-qb">${(qb||0).toLocaleString()}</td>
+      <td class="num pos-val pos-rb">${(rb||0).toLocaleString()}</td>
+      <td class="num pos-val pos-wr">${(wr||0).toLocaleString()}</td>
+      <td class="num pos-val pos-te">${(te||0).toLocaleString()}</td>
+      <td class="num pos-val" style="color:#faf089">${(picks||0).toLocaleString()}</td>
+      <td><span class="build-badge" style="background:${bc.bg};color:${bc.color}">${label}</span></td>
+      <td style="min-width:100px"><div class="bar-wrap"><div class="bar-fill" style="width:${pct}%"></div></div></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderPctGrid() {
+  const values = leagueData.values;
+  const users = leagueData.settings.users;
+
+  // Calculate league totals per position
+  const leagueTotals = { QB:0, RB:0, WR:0, TE:0, PICKS:0, Overall:0 };
+  Object.values(values).forEach(v => {
+    leagueTotals.QB += typeof v.QB === 'object' ? v.QB.value : (v.QB||0);
+    leagueTotals.RB += typeof v.RB === 'object' ? v.RB.value : (v.RB||0);
+    leagueTotals.WR += typeof v.WR === 'object' ? v.WR.value : (v.WR||0);
+    leagueTotals.TE += typeof v.TE === 'object' ? v.TE.value : (v.TE||0);
+    leagueTotals.PICKS += typeof v.PICKS === 'object' ? v.PICKS.value : (v.PICKS||0);
+    leagueTotals.Overall += v.Overall||0;
+  });
+
+  const sorted = Object.entries(values).sort((a,b) => b[1].Overall - a[1].Overall);
+
+  document.getElementById('pct-grid').innerHTML = sorted.map(([uid, v]) => {
+    const user = users.find(u => u.user_id === uid) || {};
+    const qb = typeof v.QB === 'object' ? v.QB.value : (v.QB||0);
+    const rb = typeof v.RB === 'object' ? v.RB.value : (v.RB||0);
+    const wr = typeof v.WR === 'object' ? v.WR.value : (v.WR||0);
+    const te = typeof v.TE === 'object' ? v.TE.value : (v.TE||0);
+    const picks = typeof v.PICKS === 'object' ? v.PICKS.value : (v.PICKS||0);
+
+    const pct = n => (n / leagueTotals.Overall * 100).toFixed(1) + '%';
+    const posPct = (n, total) => (n / total * 100).toFixed(1) + '%';
+
+    return `<div class="pct-card">
+      <div class="pct-team">${teamName(user)}</div>
+      <div class="pct-row"><span class="pct-label">Overall share</span><span class="pct-val" style="color:#fff;font-weight:600">${pct(v.Overall)}</span></div>
+      <div class="pct-row"><span class="pct-label pos-qb">QB</span><span class="pct-val pos-qb">${posPct(qb, leagueTotals.QB)}</span></div>
+      <div class="pct-row"><span class="pct-label pos-rb">RB</span><span class="pct-val pos-rb">${posPct(rb, leagueTotals.RB)}</span></div>
+      <div class="pct-row"><span class="pct-label pos-wr">WR</span><span class="pct-val pos-wr">${posPct(wr, leagueTotals.WR)}</span></div>
+      <div class="pct-row"><span class="pct-label pos-te">TE</span><span class="pct-val pos-te">${posPct(te, leagueTotals.TE)}</span></div>
+      <div class="pct-row"><span class="pct-label" style="color:#faf089">Picks</span><span class="pct-val" style="color:#faf089">${posPct(picks, leagueTotals.PICKS)}</span></div>
+    </div>`;
+  }).join('');
+}
+
+function renderTeamSelect() {
+  const users = leagueData.settings.users;
+  const values = leagueData.values;
+  const sorted = Object.keys(values).sort((a,b) => values[b].Overall - values[a].Overall);
+  document.getElementById('team-select').innerHTML = sorted.map(uid => {
+    const user = users.find(u => u.user_id === uid) || {};
+    return `<option value="${uid}">${teamName(user)}</option>`;
+  }).join('');
+}
+
+function renderRoster() {
+  const uid = document.getElementById('team-select').value;
+  if (!uid || !leagueData) return;
+  const roster = leagueData.rosters[uid];
+  if (!roster) { document.getElementById('roster-grid').innerHTML = '<p style="color:#718096">No roster data</p>'; return; }
+
+  const positions = [
+    { key: 'QB', label: 'Quarterbacks', cls: 'qb' },
+    { key: 'RB', label: 'Running Backs', cls: 'rb' },
+    { key: 'WR', label: 'Wide Receivers', cls: 'wr' },
+    { key: 'TE', label: 'Tight Ends', cls: 'te' },
+    { key: 'PICKS', label: 'Draft Picks', cls: 'picks' }
+  ];
+
+  document.getElementById('roster-grid').innerHTML = positions.map(pos => {
+    const players = (roster[pos.key] || []).sort((a,b) => (a.overall_rank||999) - (b.overall_rank||999));
+    if (!players.length) return '';
+    return `<div class="pos-section">
+      <div class="pos-header ${pos.cls}">${pos.label}</div>
+      ${players.map(p => `<div class="player-row">
+        <span class="player-rank">${p.overall_rank === 444 || !p.overall_rank ? 'UR' : '#' + p.overall_rank}</span>
+        <span class="player-name">${p.player_name}</span>
+        ${p.is_rookie ? '<span class="rookie-badge">R</span>' : ''}
+      </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+function findSnapshot(history, daysAgo) {
+  const target = Date.now()/1000 - (daysAgo * 86400);
+  let closest = null;
+  let closestDiff = Infinity;
+  history.forEach(s => {
+    const diff = Math.abs(s.timestamp - target);
+    if (diff < closestDiff) { closestDiff = diff; closest = s; }
+  });
+  // Only return if within 20% of target time
+  if (closest && closestDiff < daysAgo * 86400 * 0.5) return closest;
+  return null;
+}
+
+function renderChanges() {
+  const values = leagueData.values;
+  const users = leagueData.settings.users;
+  const sorted = Object.entries(values).sort((a,b) => b[1].Overall - a[1].Overall);
+
+  const snap7 = findSnapshot(historyData, 7);
+  const snap30 = findSnapshot(historyData, 30);
+  const snap90 = findSnapshot(historyData, 90);
+
+  function changeCell(current, snapshot, uid) {
+    if (!snapshot || !snapshot.values[uid]) return '<td class="num change-neu">—</td>';
+    const diff = current - snapshot.values[uid].Overall;
+    const cls = diff > 0 ? 'change-pos' : diff < 0 ? 'change-neg' : 'change-neu';
+    const sign = diff > 0 ? '+' : '';
+    return `<td class="num ${cls}">${sign}${diff.toLocaleString()}</td>`;
+  }
+
+  document.getElementById('changes-body').innerHTML = sorted.map(([uid, v]) => {
+    const user = users.find(u => u.user_id === uid) || {};
+    return `<tr>
+      <td><div class="team-name">${teamName(user)}</div></td>
+      <td class="num" style="color:#fff;font-weight:600">${v.Overall.toLocaleString()}</td>
+      ${changeCell(v.Overall, snap7, uid)}
+      ${changeCell(v.Overall, snap30, uid)}
+      ${changeCell(v.Overall, snap90, uid)}
+    </tr>`;
+  }).join('');
+}
+
+loadData();
+</script>
 </body>
 </html>

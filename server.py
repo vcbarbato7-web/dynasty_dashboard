@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, send_from_directory
 import requests, json, time, threading, os
+from datetime import datetime
 
 app = Flask(__name__, static_folder='static')
 
@@ -7,6 +8,7 @@ LEAGUE_ID = "1328112405992968192"
 API_URL = f"https://api.flockfantasy.com/user/league/calculate?creatorId=EXPERT&isDraft=false&leagueId={LEAGUE_ID}"
 LOGIN_URL = "https://api.flockfantasy.com/auth/login"
 CACHE_FILE = "cache.json"
+HISTORY_FILE = "history.json"
 CACHE_SECONDS = 3600
 
 EMAIL = os.environ.get("FLOCK_EMAIL")
@@ -19,6 +21,38 @@ def get_token():
     }, timeout=10)
     return res.json()["accessToken"]
 
+def save_history(data):
+    history = []
+    if os.path.exists(HISTORY_FILE):
+        with open(HISTORY_FILE) as f:
+            history = json.load(f)
+    
+    snapshot = {
+        "timestamp": time.time(),
+        "date": datetime.now().isoformat(),
+        "values": {}
+    }
+    
+    # Save each team's overall value and positional values
+    for uid, v in data.get("values", {}).items():
+        snapshot["values"][uid] = {
+            "Overall": v.get("Overall"),
+            "QB": v.get("QB", {}).get("value") if isinstance(v.get("QB"), dict) else v.get("QB"),
+            "RB": v.get("RB", {}).get("value") if isinstance(v.get("RB"), dict) else v.get("RB"),
+            "WR": v.get("WR", {}).get("value") if isinstance(v.get("WR"), dict) else v.get("WR"),
+            "TE": v.get("TE", {}).get("value") if isinstance(v.get("TE"), dict) else v.get("TE"),
+            "PICKS": v.get("PICKS", {}).get("value") if isinstance(v.get("PICKS"), dict) else v.get("PICKS"),
+        }
+    
+    history.append(snapshot)
+    
+    # Keep only last 90 days of snapshots
+    cutoff = time.time() - (90 * 24 * 3600)
+    history = [s for s in history if s["timestamp"] > cutoff]
+    
+    with open(HISTORY_FILE, "w") as f:
+        json.dump(history, f)
+
 def refresh_cache():
     while True:
         try:
@@ -28,7 +62,8 @@ def refresh_cache():
             data = res.json()
             with open(CACHE_FILE, "w") as f:
                 json.dump({"timestamp": time.time(), "data": data}, f)
-            print("Cache refreshed successfully")
+            save_history(data)
+            print(f"Cache refreshed at {datetime.now()}")
         except Exception as e:
             print(f"Fetch error: {e}")
         time.sleep(CACHE_SECONDS)
@@ -42,9 +77,17 @@ def league():
         token = get_token()
         headers = {"Authorization": f"Bearer {token}"}
         data = requests.get(API_URL, headers=headers, timeout=10).json()
+        save_history(data)
         return jsonify({"timestamp": time.time(), "data": data})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route("/api/history")
+def history():
+    if os.path.exists(HISTORY_FILE):
+        with open(HISTORY_FILE) as f:
+            return jsonify(json.load(f))
+    return jsonify([])
 
 @app.route("/")
 def index():
