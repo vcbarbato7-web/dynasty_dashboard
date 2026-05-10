@@ -4,18 +4,31 @@ import requests, json, time, threading, os
 app = Flask(__name__, static_folder='static')
 
 LEAGUE_ID = "1328112405992968192"
-API_URL = f"https://api.flockfantasy.com/leagues/{LEAGUE_ID}"
+API_URL = f"https://api.flockfantasy.com/user/league/calculate?creatorId=EXPERT&isDraft=false&leagueId={LEAGUE_ID}"
+LOGIN_URL = "https://api.flockfantasy.com/auth/login"
 CACHE_FILE = "cache.json"
 CACHE_SECONDS = 3600
+
+EMAIL = os.environ.get("FLOCK_EMAIL")
+PASSWORD = os.environ.get("FLOCK_PASSWORD")
+
+def get_token():
+    res = requests.post(LOGIN_URL, json={
+        "username": EMAIL,
+        "password": PASSWORD
+    }, timeout=10)
+    return res.json()["accessToken"]
 
 def refresh_cache():
     while True:
         try:
-            res = requests.get(API_URL, timeout=10)
+            token = get_token()
+            headers = {"Authorization": f"Bearer {token}"}
+            res = requests.get(API_URL, headers=headers, timeout=10)
             data = res.json()
             with open(CACHE_FILE, "w") as f:
                 json.dump({"timestamp": time.time(), "data": data}, f)
-            print("Cache refreshed")
+            print("Cache refreshed successfully")
         except Exception as e:
             print(f"Fetch error: {e}")
         time.sleep(CACHE_SECONDS)
@@ -26,10 +39,12 @@ def league():
         with open(CACHE_FILE) as f:
             return jsonify(json.load(f))
     try:
-        data = requests.get(API_URL, timeout=10).json()
+        token = get_token()
+        headers = {"Authorization": f"Bearer {token}"}
+        data = requests.get(API_URL, headers=headers, timeout=10).json()
         return jsonify({"timestamp": time.time(), "data": data})
-    except:
-        return jsonify({"error": "Could not fetch data"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/")
 def index():
