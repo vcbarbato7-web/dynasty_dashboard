@@ -104,6 +104,7 @@
 
 <nav>
   <button class="nav-btn active" onclick="showSection('rankings')">Power Rankings</button>
+  <button class="nav-btn" onclick="showSection('contenders')">Contender Rankings</button>
   <button class="nav-btn" onclick="showSection('rosters')">Rosters</button>
   <button class="nav-btn" onclick="showSection('changes')">Value Changes</button>
 </nav>
@@ -145,7 +146,25 @@
         <div class="pct-grid" id="pct-grid"></div>
       </div>
     </div>
+    <!-- CONTENDER RANKINGS -->
+    <div id="sec-contenders" class="section">
+      <div class="card">
+        <div class="card-title">Contender Rankings</div>
 
+        <table class="rankings-table">
+         <thead>
+          <tr>
+           <th>#</th>
+           <th>Team</th>
+           <th class="num">Contender Score</th>
+           <th>Tier</th>
+           <th>Strength</th>
+          </tr>
+         </thead>
+        <tbody id="contender-body"></tbody>
+       </table>
+      </div>
+    </div>
     <!-- ROSTERS -->
     <div id="sec-rosters" class="section">
       <div class="team-select-wrap">
@@ -180,6 +199,7 @@
 <script>
 let leagueData = null;
 let historyData = [];
+let leagueData = null;
 
 const BUILD_COLORS = {
   JUGGERNAUT: { bg: '#1a2e22', color: '#68d391' },
@@ -207,11 +227,12 @@ async function loadData() {
     const [leagueRes, historyRes] = await Promise.all([
       fetch('/api/league'),
       fetch('/api/history')
+      fetch('https://api.flockfantasy.com/user/league/calculate?creatorId=EXPERT&isDraft=false&leagueId=1328112405992968192&rankingType=contender')
     ]);
     const leagueJson = await leagueRes.json();
     leagueData = leagueJson.data;
     historyData = await historyRes.json();
-
+    contenderData = await contenderRes.json();
     const ts = new Date(leagueJson.timestamp * 1000);
     document.getElementById('last-updated').textContent = `Last updated: ${ts.toLocaleString()}`;
 
@@ -219,6 +240,7 @@ async function loadData() {
     document.getElementById('sections').style.display = 'block';
 
     renderRankings();
+    renderContenders();
     renderStatBoxes();
     renderPctGrid();
     renderTeamSelect();
@@ -276,6 +298,85 @@ function renderRankings() {
       <td style="min-width:100px"><div class="bar-wrap"><div class="bar-fill" style="width:${pct}%"></div></div></td>
     </tr>`;
   }).join('');
+}
+function renderContenders() {
+
+  if (!contenderData) return;
+
+  const users = contenderData.settings.users;
+
+  /*
+    Flock usually returns either:
+
+    contenderData.values
+
+    OR
+
+    contenderData.rankings
+
+    depending on endpoint version.
+  */
+
+  const values =
+      contenderData.values ||
+      contenderData.rankings ||
+      {};
+
+  const sorted = Object.entries(values)
+      .sort((a,b) => (b[1].Overall || b[1].score || 0) -
+                     (a[1].Overall || a[1].score || 0));
+
+  const maxScore =
+      sorted.length
+      ? (sorted[0][1].Overall || sorted[0][1].score || 1)
+      : 1;
+
+  document.getElementById('contender-body').innerHTML =
+    sorted.map(([uid,v],idx) => {
+
+      const user =
+        users.find(u => u.user_id === uid) || {};
+
+      const score =
+        v.Overall ||
+        v.score ||
+        v.contenderScore ||
+        0;
+
+      const pct =
+        Math.round(score / maxScore * 100);
+
+      let tier = "Rebuilder";
+
+      if (pct >= 90) tier = "Elite Contender";
+      else if (pct >= 80) tier = "Contender";
+      else if (pct >= 65) tier = "Playoff Team";
+      else if (pct >= 50) tier = "Middle";
+      else tier = "Rebuilder";
+
+      return `
+      <tr>
+        <td class="rank-num">${idx + 1}</td>
+
+        <td>
+          <div class="team-name">${teamName(user)}</div>
+          <div class="team-meta">${user.user_name || ''}</div>
+        </td>
+
+        <td class="num" style="font-weight:600;color:#fff">
+          ${Number(score).toLocaleString()}
+        </td>
+
+        <td>${tier}</td>
+
+        <td style="min-width:120px">
+          <div class="bar-wrap">
+            <div class="bar-fill" style="width:${pct}%"></div>
+          </div>
+        </td>
+      </tr>
+      `;
+    }).join('');
 }
 
 function renderPctGrid() {
