@@ -270,7 +270,7 @@ function renderStatBoxes() {
 
 function renderRankings() {
   const values = leagueData.values;
-  const users = leagueData.settings.users;
+  const users = leagueData.settings.users; 
   const sorted = Object.entries(values).sort((a,b) => b[1].Overall - a[1].Overall);
   const maxVal = sorted[0][1].Overall;
 
