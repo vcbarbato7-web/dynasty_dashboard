@@ -199,7 +199,7 @@
 <script>
 let leagueData = null;
 let historyData = [];
-let leagueData = null;
+let contenderData = null;
 
 const BUILD_COLORS = {
   JUGGERNAUT: { bg: '#1a2e22', color: '#68d391' },
@@ -224,9 +224,9 @@ function teamName(user) {
 
 async function loadData() {
   try {
-    const [leagueRes, historyRes] = await Promise.all([
+    const [leagueRes, historyRes, contenderRes] = await Promise.all([
       fetch('/api/league'),
-      fetch('/api/history')
+      fetch('/api/history'),
       fetch('https://api.flockfantasy.com/user/league/calculate?creatorId=EXPERT&isDraft=false&leagueId=1328112405992968192&rankingType=contender')
     ]);
     const leagueJson = await leagueRes.json();
